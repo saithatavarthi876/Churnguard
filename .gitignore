@@ -1,0 +1,21 @@
+
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Raw and processed data
+data/raw/
+data/processed/
+data/*.db
+
+# Generated model and output files
+models/
+logs/
+reports/*.png
+reports/*.csv
+reports/*.txt
+reports/*.json
+
+# Editor settings
+.vscode/
