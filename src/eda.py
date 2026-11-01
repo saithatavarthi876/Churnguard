@@ -35,7 +35,29 @@ def inspect_data(df):
         REPORT_DIR / "descriptive_statistics.csv"
     )
 
+def analyze_data_quality(df):
+    print("\nMissing values by column:")
+    print(df.isnull().sum())
 
+    print("\nBlank strings by column:")
+    print(
+        df.astype("string")
+        .apply(lambda column: column.str.strip().eq("").sum())
+    )
+
+    print("\nExact duplicate rows:")
+    print(df.duplicated().sum())
+
+    print("\nDuplicate customer IDs:")
+    print(df["customerID"].duplicated().sum())
+
+    print("\nChurn distribution:")
+    print(df["Churn"].value_counts(dropna=False))
+
+    print("\nChurn proportions:")
+    print(df["Churn"].value_counts(normalize=True, dropna=False))
+    
 if __name__ == "__main__":
     df = load_data()
     inspect_data(df)
+    analyze_data_quality(df)
