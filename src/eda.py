@@ -1,6 +1,8 @@
 
 from pathlib import Path
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_FILE = ROOT / "data" / "raw" / "Telco-Customer-Churn.csv"
@@ -56,8 +58,69 @@ def analyze_data_quality(df):
 
     print("\nChurn proportions:")
     print(df["Churn"].value_counts(normalize=True, dropna=False))
+
+
+def create_eda_charts(df):
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Work on a copy so the raw dataset remains unchanged.
+    data = df.copy()
+    data["TotalCharges"] = pd.to_numeric(
+        data["TotalCharges"], errors="coerce"
+    )
+
+    # 1. Churn distribution
+    plt.figure(figsize=(6, 4))
+    sns.countplot(data=data, x="Churn")
+    plt.title("Customer Churn Distribution")
+    plt.tight_layout()
+    plt.savefig(REPORT_DIR / "churn_distribution.png")
+    plt.close()
+
+    # 2. Churn by contract type
+    plt.figure(figsize=(8, 5))
+    sns.countplot(data=data, x="Contract", hue="Churn")
+    plt.title("Churn by Contract Type")
+    plt.xticks(rotation=15)
+    plt.tight_layout()
+    plt.savefig(REPORT_DIR / "churn_by_contract.png")
+    plt.close()
+
+    # 3. Tenure by churn status
+    plt.figure(figsize=(8, 5))
+    sns.histplot(
+        data=data,
+        x="tenure",
+        hue="Churn",
+        bins=25,
+        element="step",
+    )
+    plt.title("Customer Tenure by Churn Status")
+    plt.tight_layout()
+    plt.savefig(REPORT_DIR / "tenure_by_churn.png")
+    plt.close()
+
+    # 4. Correlations between numeric features
+    numeric_data = data.select_dtypes(include="number")
+
+    plt.figure(figsize=(9, 6))
+    sns.heatmap(
+        numeric_data.corr(),
+        annot=True,
+        cmap="coolwarm",
+        fmt=".2f",
+    )
+    plt.title("Numeric Feature Correlation")
+    plt.tight_layout()
+    plt.savefig(REPORT_DIR / "correlation_heatmap.png")
+    plt.close()
+
+    print("EDA charts saved in the reports folder.")
+
     
 if __name__ == "__main__":
     df = load_data()
     inspect_data(df)
     analyze_data_quality(df)
+    create_eda_charts(df)
+    
