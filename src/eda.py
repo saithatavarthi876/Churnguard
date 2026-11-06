@@ -18,7 +18,46 @@ def load_data():
     return pd.read_csv(DATA_FILE)
 
 
+# def inspect_data(df):
+#     print("\nDataset shape:")
+#     print(df.shape)
+
+#     print("\nFirst five rows:")
+#     print(df.head())
+
+#     print("\nColumn names and data types:")
+#     print(df.dtypes)
+
+#     print("\nDescriptive statistics:")
+#     print(df.describe(include="all").transpose())
+
+#     REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+#     df.describe(include="all").transpose().to_csv(
+#         REPORT_DIR / "descriptive_statistics.csv"
+#     )
+def get_feature_type(column, series):
+
+    # Customer ID is an identifier, not a predictive feature
+    if column == "customerID":
+        return "Identifier"
+
+    # Binary categorical columns
+    if series.nunique(dropna=True) == 2 and (
+        series.dtype == "object" or
+        str(series.dtype) == "category"
+    ):
+        return "Binary"
+
+    # Numerical columns
+    if pd.api.types.is_numeric_dtype(series):
+        return "Numerical"
+
+    # Categorical columns
+    return "Categorical (Nominal)"
+
 def inspect_data(df):
+
     print("\nDataset shape:")
     print(df.shape)
 
@@ -29,14 +68,70 @@ def inspect_data(df):
     print(df.dtypes)
 
     print("\nDescriptive statistics:")
-    print(df.describe(include="all").transpose())
+    statistics = df.describe(include="all").transpose()
+
+    # Create feature information
+    feature_info = pd.DataFrame({
+        "Data Type": df.dtypes.astype(str),
+        "Feature Type": [
+            get_feature_type(column, df[column])
+            for column in df.columns
+        ]
+    }, index=df.columns)
+
+    # Combine feature information with statistics
+    report = feature_info.join(statistics)
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-    df.describe(include="all").transpose().to_csv(
-        REPORT_DIR / "descriptive_statistics.csv"
-    )
+    output_file = REPORT_DIR / "descriptive_statistics.xlsx"
 
+    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+
+        report.to_excel(
+            writer,
+            sheet_name="Dataset Analysis"
+        )
+
+        worksheet = writer.sheets["Dataset Analysis"]
+
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+        # Header formatting
+        for cell in worksheet[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(
+                start_color="305496",
+                end_color="305496",
+                fill_type="solid"
+            )
+            cell.alignment = Alignment(horizontal="center")
+
+        # Automatic column widths
+        for column in worksheet.columns:
+
+            max_length = max(
+                (len(str(cell.value)) for cell in column
+                 if cell.value is not None),
+                default=0
+            )
+
+            worksheet.column_dimensions[
+                column[0].column_letter
+            ].width = min(max_length + 4, 30)
+
+        # Cell formatting
+        for row in worksheet.iter_rows(min_row=2):
+            for cell in row:
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = Border(
+                    bottom=Side(style="thin", color="D9E2F3")
+                )
+
+        worksheet.freeze_panes = "B2"
+        worksheet.auto_filter.ref = worksheet.dimensions
+
+    print("\nDataset analysis Excel report generated successfully!")
 def analyze_data_quality(df):
     print("\nMissing values by column:")
     print(df.isnull().sum())
@@ -386,7 +481,7 @@ def create_charges_charts(data):
  
 
 
-# IMAGE 5: CORRELATION AND CUSTOMER RELATIONSHIPS
+# IMAGE 4: CORRELATION AND CUSTOMER RELATIONSHIPS
 
 def create_relationship_charts(data):
 
@@ -424,7 +519,7 @@ def create_relationship_charts(data):
     )
 
     plt.close()
-# IMAGE 6: CHURN RATE BY TENURE GROUP
+# IMAGE 5: CHURN RATE BY TENURE GROUP
 
 def create_tenure_group_chart(data):
 
