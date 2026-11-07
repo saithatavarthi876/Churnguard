@@ -16,6 +16,6 @@ reports/*.png
 reports/*.csv
 reports/*.txt
 reports/*.json
-
+reports/*.xlsx
 # Editor settings
 .vscode/
