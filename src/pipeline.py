@@ -21,24 +21,29 @@ def run_pipeline():
         format="%(asctime)s | %(levelname)s | %(message)s",
         force=True,
     )
-
+    
     logging.info("Pipeline started.")
 
     try:
         raw_data = ingest_data()
+        logging.info("Ingestion completed.")
+        
         validate_data(raw_data)
+    
+        logging.info("Validation completed.")
+        
         cleaned_data = transform_data(raw_data)
-
+        logging.info("Transformation completed.")
+        
         cleaned_data.to_csv(PROCESSED_FILE, index=False)
+        logging.info("Processed CSV exported.")
 
-        logging.info(
-            "Pipeline completed. Rows processed: %s",
-            len(cleaned_data),
-        )
-        print(f"Saved processed data to {PROCESSED_FILE}")
         load_customers(cleaned_data)
+        logging.info("SQLite customer table updated.")
+        
         record_pipeline_run("SUCCESS", len(cleaned_data))
-        print("Pipeline run recorded in the database.")
+        logging.info("Pipeline completed successfully.")
+       
         return cleaned_data
         
     except Exception as error:
