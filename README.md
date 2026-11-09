@@ -1,18 +1,17 @@
-# ChurnGuard – Customer Churn Prediction
+# ChurnGuard: Customer Churn Prediction and Data Pipeline
 
-## About the Project
-ChurnGuard is a machine learning and data engineering project that aims to predict whether a customer is likely to leave a telecommunications company.
-Customer churn can affect a company's revenue and long-term growth. By studying customer information such as contract type, monthly charges, tenure, and services used, this project explores how machine learning can help identify customers who may be at risk of leaving.
-I am building this project to understand how a complete data workflow works, from collecting and preparing data to training a machine learning model and storing processed information.
+## Overview
 
-## Project Objectives
-- Understand the customer churn dataset through exploratory data analysis (EDA).
-- Clean the data and handle missing or inconsistent values.
-- Transform the data into a format suitable for machine learning.
-- Train and evaluate classification models.
-- Store processed data and results using SQLite.
-- Build a repeatable pipeline for data processing and model training.
-- Add basic testing, logging, and automation.
+ChurnGuard is a machine learning and data engineering project that predicts customer churn using the IBM Telco Customer
+Churn sample dataset.
+
+The project demonstrates data ingestion, validation, transformation, exploratory data analysis, machine learning,
+SQLite storage, logging, automated tests, and CI.
+
+## Problem Statement
+
+Customer churn can affect revenue and long-term customer relationships. This project explores customer characteristics
+and builds classification models to identify customers who may leave a service provider.
 
 ## Dataset
 This project uses the IBM Telco Customer Churn dataset.
@@ -20,7 +19,10 @@ The dataset contains customer information, account details, subscribed services,
 
 **Dataset source:** [IBM Telco Customer Churn Dataset](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
 
-## Technologies Used
+The raw dataset is not committed to this repository.
+
+## Technologies
+
 - **Programming:** Python
 - **Data Analysis:** Pandas, NumPy
 - **Visualization:** Matplotlib, Seaborn
@@ -31,20 +33,61 @@ The dataset contains customer information, account details, subscribed services,
 - **Automation:** GitHub Actions
 
 ## Project Workflow
-1. Load the raw customer dataset.
-2. Explore the data and identify patterns.
-3. Clean and preprocess the dataset.
-4. Store and query structured data using SQLite.
-5. Train classification models to predict customer churn.
-6. Evaluate model performance using suitable classification metrics.
-7. Automate the workflow and add tests to check important functionality.
+
+1. Ingest the raw customer dataset.
+2. Validate required columns and customer identifiers.
+3. Clean and transform the data.
+4. Save the processed dataset.
+5. Store customer records and pipeline history in SQLite.
+6. Perform EDA and generate charts.
+7. Train a baseline and three classification models.
+8. Compare models using cross-validation and test metrics.
+9. Run automated data pipeline tests.
+10. Run the workflow through a single command.
+
+## Setup
+
+Create a virtual environment and install dependencies:
+
+    python -m venv .venv
+    python -m pip install -r requirements.txt
+
+Activate the environment using the command appropriate
+for your operating system.
+
+## Run the Project
+
+    python -m src.run_all
+
+Run the pipeline independently:
+
+    python -m src.pipeline
+
+Run SQL queries:
+
+    python -m src.database
+
+Run tests:
+
+    python -m pytest -v
 
 ## Evaluation
-The models will be evaluated using metrics such as accuracy, precision, recall, F1-score, and the confusion matrix.
-Since identifying customers who may leave is important, recall and F1-score will also be considered rather than relying on accuracy alone.
 
-## Project Status
-This project is being developed incrementally. The goal is to build a working end-to-end pipeline while learning and applying machine learning, data engineering, SQL, testing, and automation concepts.
+The project compares a Dummy Classifier baseline, Logistic Regression, Decision Tree, and Random Forest.
 
-## What I Hope to Learn
-Through this project, I aim to gain practical experience in preparing real-world data, building classification models, organizing Python code into reusable modules, managing data with SQL, testing code, and maintaining a project using Git and GitHub.
+Metrics include accuracy, precision, recall, F1-score, ROC-AUC, and a confusion matrix.
+
+Actual model results are generated during execution and saved in the reports directory.
+
+## Limitations
+
+The dataset is a static sample. This project demonstrates a repeatable local pipeline, not a real-time production
+system. Predictions do not guarantee that a customer will leave.
+
+## Future Improvements
+
+- Model hyperparameter tuning
+- Data drift monitoring
+- Scheduled pipeline execution
+- API-based predictions
+- Containerization and deployment
