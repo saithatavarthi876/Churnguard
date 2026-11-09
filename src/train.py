@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import json
+from unicodedata import name
 
 import joblib
 import pandas as pd
@@ -11,12 +12,13 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -27,39 +29,17 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
 )
 
+
+# Project paths
 ROOT = Path(__file__).resolve().parent.parent
 DATA_FILE = ROOT / "data" / "processed" / "customers_clean.csv"
 MODEL_DIR = ROOT / "models"
 REPORT_DIR = ROOT / "reports"
 
-models = {
-    "Dummy Baseline": DummyClassifier(
-        strategy="most_frequent"
-    ),
-
-    "Logistic Regression": LogisticRegression(
-    max_iter=2000,
-    class_weight="balanced",
-    random_state=42,
-    ),
-
-    "Decision Tree": DecisionTreeClassifier(
-    max_depth=6,
-    class_weight="balanced",
-    random_state=42,
-    ),
-
-    "Random Forest": RandomForestClassifier(
-    n_estimators=200,
-    max_depth=12,
-    class_weight="balanced",
-    random_state=42,
-    n_jobs=-1,
-    ),
-
-}
 
 def build_preprocessor(X):
+
+    # Identify numerical and categorical columns
     numeric_columns = X.select_dtypes(
         include="number"
     ).columns.tolist()
@@ -68,16 +48,19 @@ def build_preprocessor(X):
         exclude="number"
     ).columns.tolist()
 
+    # Numerical data preprocessing
     numeric_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
     ])
 
+    # Categorical data preprocessing
     categorical_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="most_frequent")),
         ("encoder", OneHotEncoder(handle_unknown="ignore")),
     ])
 
+    # Apply appropriate preprocessing to each column type
     return ColumnTransformer([
         ("numeric", numeric_pipeline, numeric_columns),
         ("categorical", categorical_pipeline, categorical_columns),
@@ -85,9 +68,11 @@ def build_preprocessor(X):
 
 
 def prepare_data(df):
+
+    # Convert target values into numbers
     y = df["Churn"].map({"No": 0, "Yes": 1})
 
-    # customerID is an identifier, not a useful predictor here.
+    # Remove target and customer identifier from features
     X = df.drop(columns=["Churn", "customerID"])
 
     if y.isna().any():
@@ -102,33 +87,46 @@ def prepare_data(df):
     )
 
 
-
 def main():
+
+    # Check whether processed dataset exists
     if not DATA_FILE.exists():
         raise FileNotFoundError(
-            "Processed dataset not found. Run the data pipeline first."
+            f"Processed dataset not found: {DATA_FILE}. "
+            "Run the data pipeline first."
         )
 
+    # Create output directories
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
+    print("Loading processed dataset...")
     df = pd.read_csv(DATA_FILE)
+
+    print("Preparing training and testing data...")
     X_train, X_test, y_train, y_test = prepare_data(df)
 
+    print("Training rows:", len(X_train))
+    print("Testing rows:", len(X_test))
+
+    # Define classification models
     models = {
         "Dummy Baseline": DummyClassifier(
             strategy="most_frequent"
         ),
+
         "Logistic Regression": LogisticRegression(
             max_iter=2000,
             class_weight="balanced",
             random_state=42,
         ),
+
         "Decision Tree": DecisionTreeClassifier(
             max_depth=6,
             class_weight="balanced",
             random_state=42,
         ),
+
         "Random Forest": RandomForestClassifier(
             n_estimators=200,
             max_depth=12,
@@ -138,6 +136,7 @@ def main():
         ),
     }
 
+    # Five-fold stratified cross-validation
     cv = StratifiedKFold(
         n_splits=5,
         shuffle=True,
@@ -146,13 +145,18 @@ def main():
 
     results = []
     fitted_models = {}
-
+    all_classification_reports = {}
+    # Train and evaluate each model
     for name, classifier in models.items():
+
+        print(f"\nTraining {name}...")
+
         model = Pipeline([
             ("preprocessing", build_preprocessor(X_train)),
             ("classifier", classifier),
         ])
 
+        # Evaluate using cross-validation on training data
         cv_scores = cross_val_score(
             model,
             X_train,
@@ -162,11 +166,24 @@ def main():
             n_jobs=-1,
         )
 
+        # Train the model on the complete training dataset
         model.fit(X_train, y_train)
 
+        # Predict on unseen test data
         predictions = model.predict(X_test)
         probabilities = model.predict_proba(X_test)[:, 1]
 
+        # Generate classification report for the current model
+        model_report = classification_report(
+        y_test,
+        predictions,
+        labels=[0, 1],
+        target_names=["Stayed", "Churned"],
+        zero_division=0,
+)
+
+        all_classification_reports[name] = model_report
+        # Calculate evaluation metrics
         result = {
             "model": name,
             "cv_f1_mean": cv_scores.mean(),
@@ -189,64 +206,77 @@ def main():
         results.append(result)
         fitted_models[name] = model
 
-        print(f"\n{name}")
+        print(f"\n{name} results:")
         print(pd.Series(result).to_string())
 
+    # Create model comparison DataFrame
     results_df = pd.DataFrame(results)
+
+    
+    # Save model comparison results
     results_df.to_csv(
         REPORT_DIR / "model_comparison.csv",
         index=False,
     )
 
-    # Choose the model using training cross-validation, not test scores.
+    # Select the best model using cross-validation F1 score
     best_name = results_df.loc[
-        results_df["cv_f1_mean"].idxmax(), "model"
+        results_df["cv_f1_mean"].idxmax(),
+        "model",
     ]
+
     best_model = fitted_models[best_name]
 
-    joblib.dump(best_model, MODEL_DIR / "best_model.joblib")
-
-    predictions = best_model.predict(X_test)
-
-    report = classification_report(
-        y_test,
-        predictions,
-        target_names=["Stayed", "Churned"],
-        zero_division=0,
+    # Save the selected model
+    joblib.dump(
+        best_model,
+        MODEL_DIR / "best_model.joblib",
     )
 
+    # Create a complete evaluation report
+    report_content = []
+
+    report_content.append("=" * 65)
+    report_content.append("CHURNGUARD - MODEL EVALUATION REPORT")
+    report_content.append("=" * 65)
+
+    # Include classification reports for all models
+    for model_name, model_report in all_classification_reports.items():
+
+        report_content.append("\n")
+        report_content.append("-" * 65)
+        report_content.append(f"MODEL: {model_name}")
+        report_content.append("-" * 65)
+        report_content.append(model_report)
+
+    # Include model comparison table
+    report_content.append("\n")
+    report_content.append("=" * 65)
+    report_content.append("MODEL COMPARISON")
+    report_content.append("=" * 65)
+
+    report_content.append(
+        results_df.round(4).to_string(index=False)
+    )
+
+    # Put selected model at the very end
+    report_content.append("\n")
+    report_content.append("=" * 65)
+    report_content.append("FINAL SELECTED MODEL")
+    report_content.append("=" * 65)
+
+    report_content.append(f"Selected Model: {best_name}")
+    report_content.append("Selection Metric: Mean 5-fold Cross-Validation F1 Score")
+    report_content.append(
+        f"Cross-validation F1 Score: "
+        f"{results_df.loc[results_df['model'] == best_name, 'cv_f1_mean'].iloc[0]:.4f}"
+    )
+
+    # Save complete report
     (REPORT_DIR / "classification_report.txt").write_text(
-        f"Selected model: {best_name}\n\n{report}",
+        "\n".join(report_content),
         encoding="utf-8",
     )
-
-    ConfusionMatrixDisplay.from_predictions(
-        y_test,
-        predictions,
-        display_labels=["Stayed", "Churned"],
-    )
-    plt.title(f"Confusion Matrix: {best_name}")
-    plt.tight_layout()
-    plt.savefig(REPORT_DIR / "best_model_confusion_matrix.png")
-    plt.close()
-
-    summary = {
-        "selected_model": best_name,
-        "training_rows": len(X_train),
-        "test_rows": len(X_test),
-        "target": "Churn",
-        "positive_class": "Yes",
-        "selection_metric": "Mean 5-fold CV F1",
-    }
-
-    (REPORT_DIR / "training_summary.json").write_text(
-        json.dumps(summary, indent=4),
-        encoding="utf-8",
-    )
-
-    print("\nModel comparison:")
-    print(results_df.round(4).to_string(index=False))
-    print("\nSelected model:", best_name)
 
 
 if __name__ == "__main__":
