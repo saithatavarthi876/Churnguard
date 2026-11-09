@@ -64,4 +64,5 @@ def test_duplicate_rows_are_removed():
 
     cleaned = transform_data(df)
 
-    assert len(cleaned) == 3
+    assert len(cleaned) == 3 
+    print ("Duplicate rows removed successfully.")
