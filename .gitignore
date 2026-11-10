@@ -1,21 +1,52 @@
 
-.venv/
+# Python cache
 __pycache__/
-.pytest_cache/
-*.pyc
+*.py[cod]
+*.pyo
 
-# Raw and processed data
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Raw and processed datasets
 data/raw/
 data/processed/
-data/*.db
 
-# Generated model and output files
-models/
-logs/
+# SQLite databases
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Model files
+/models/*
+!/models/best_model.joblib
+
+# Generated reports
 reports/*.png
 reports/*.csv
 reports/*.txt
 reports/*.json
 reports/*.xlsx
-# Editor settings
-.vscode/
+
+# Logs
+logs/
+*.log
+
+# Operating system
+.DS_Store
+Thumbs.db
