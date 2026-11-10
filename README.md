@@ -1,5 +1,8 @@
 # ChurnGuard: Customer Churn Prediction and Data Pipeline
 
+Click this to view my deployed app--> https://churnguard-dsml-devops.streamlit.app/
+
+
 ## Overview
 
 ChurnGuard is an end-to-end machine learning and data engineering project that predicts customer churn using the IBM Telco Customer Churn dataset.
@@ -190,3 +193,6 @@ python -m streamlit run app/main.py
 ## Project Goal
 
 ChurnGuard demonstrates an end-to-end workflow combining data engineering, machine learning, software testing, CI automation, and cloud-based application deployment in a single project.
+
+
+
