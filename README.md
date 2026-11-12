@@ -88,7 +88,7 @@ Application features include:
 - Churn probability scores.
 
 
-**Live Application:** [ChurnGuard – Streamlit App](YOUR_STREAMLIT_APP_URL)
+**Live Application:** [ChurnGuard – Streamlit App](https://churnguard-dsml-devops.streamlit.app/)
 
 ## Continuous Integration with Jenkins
 
